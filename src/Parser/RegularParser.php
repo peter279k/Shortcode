@@ -210,9 +210,9 @@ final class RegularParser implements ParserInterface
             return $this->match(self::TOKEN_DELIMITER) ? $value : false;
         }
 
-        if($this->match(self::TOKEN_STRING, $appendValue)) {
-            while($this->match(self::TOKEN_STRING, $appendValue)) {
-                continue;
+        if($this->lookahead(self::TOKEN_STRING) || $this->lookahead(self::TOKEN_MARKER)) {
+            while(false === ($this->lookahead(self::TOKEN_WS) || $this->lookahead(self::TOKEN_CLOSE) || $this->lookaheadN(array(self::TOKEN_MARKER, self::TOKEN_CLOSE)))) {
+                $this->match(null, $appendValue);
             }
 
             return $value;
@@ -256,6 +256,28 @@ final class RegularParser implements ParserInterface
     private function lookahead($type)
     {
         return $this->position < $this->tokensCount && (empty($type) || $this->tokens[$this->position][0] === $type);
+    }
+
+    private function lookaheadN(array $types)
+    {
+        $count = count($types);
+        if($this->position + $count > $this->tokensCount) {
+            return false;
+        }
+
+        $position = $this->position;
+        foreach($types as $type) {
+            // note: automatically skips whitespace tokens
+            if($this->tokens[$position][0] === self::TOKEN_WS) {
+                $position++;
+            }
+            if($type !== $this->tokens[$position][0]) {
+                return false;
+            }
+            $position++;
+        }
+
+        return true;
     }
 
     private function match($type, $callback = null, $ws = false)
